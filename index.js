@@ -68,6 +68,7 @@ client.connect((err) => {
   });
 
   app.post("/placeOrder", (req, res) => {
+    console.log(req.body);
     const newOrder = req.body;
     orderCollection.insertOne(newOrder).then((result) => {
       res.send(result.insertedCount > 0);

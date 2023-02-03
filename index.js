@@ -1,85 +1,92 @@
 const express = require("express");
-const MongoClient = require("mongodb").MongoClient;
+const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const ObjectId = require("mongodb").ObjectID;
+const Product = require("./models/Product");
+const Order = require("./models/Order");
 require("dotenv").config();
 const app = express();
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(cors());
 
 const port = process.env.PORT || 5050;
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.gbf8e.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+const uri = `mongodb+srv://chaldaluser:chaldaluser420@cluster0.gbf8e.mongodb.net/chalDalDB?retryWrites=true&w=majority`;
+
+mongoose
+  .connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("database connection successful!"))
+  .catch((err) => console.log(err));
+
+app.post("/addProduct", async (req, res) => {
+  try {
+    const newProduct = new Product(req.body);
+    const data = await newProduct.save();
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+  }
 });
-client.connect((err) => {
-  const productCollection = client.db("chalDalDB").collection("products");
-  const orderCollection = client.db("chalDalDB").collection("orders");
 
-  app.post("/addProduct", (req, res) => {
-    const newProduct = req.body;
-    productCollection.insertOne(newProduct).then((result) => {
-      res.send(result.insertedCount > 0);
+app.get("/products", async (req, res) => {
+  try {
+    const data = await Product.find();
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+app.get("/singleProduct/:id", async (req, res) => {
+  try {
+    const data = await Product.findById(req.params.id);
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+  }
+});
+
+app.patch("/updateProduct/:id", async (req, res) => {
+  try {
+    const data = await Product.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
     });
-  });
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+  }
+});
 
-  app.get("/products", (req, res) => {
-    productCollection.find({}).toArray((err, products) => {
-      res.send(products);
-    });
-  });
+//Delete data
+app.delete("/deleteProduct/:id", async (req, res) => {
+  try {
+    const data = await Product.findByIdAndDelete(req.params.id);
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+  }
+});
 
-  app.get("/singleProduct/:id", (req, res) => {
-    productCollection
-      .find({ _id: ObjectId(req.params.id) })
-      .toArray((err, docs) => {
-        res.send(docs[0]);
-      });
-  });
+app.post("/placeOrder", async (req, res) => {
+  try {
+    const newOrder = new Order(req.body);
+    const data = await newOrder.save();
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+  }
+});
 
-  app.patch("/updateProduct/:id", (req, res) => {
-    productCollection
-      .updateOne(
-        { _id: ObjectId(req.params.id) },
-        {
-          $set: {
-            name: req.body.name,
-            price: req.body.price,
-            weight: req.body.weight,
-            imgUrl: req.body.imgUrl,
-          },
-        }
-      )
-      .then((result) => {
-        res.send(result.modifiedCount > 0);
-      });
-  });
-
-  //Delete data
-  app.delete("/deleteProduct/:id", (req, res) => {
-    productCollection
-      .deleteOne({ _id: ObjectId(req.params.id) })
-      .then((result) => {
-        res.send(result.deletedCount > 0);
-      });
-  });
-
-  app.post("/placeOrder", (req, res) => {
-    console.log(req.body);
-    const newOrder = req.body;
-    orderCollection.insertOne(newOrder).then((result) => {
-      res.send(result.insertedCount > 0);
-    });
-  });
-
-  app.get("/orders/:email", (req, res) => {
-    orderCollection.find({ email: req.params.email }).toArray((err, docs) => {
-      res.send(docs);
-    });
-  });
+app.get("/allOrder/:email", async (req, res) => {
+  try {
+    const data = await Order.find({ email: req.params.email });
+    res.status(200).json(data);
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 app.get("/", (req, res) => {
